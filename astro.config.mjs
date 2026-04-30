@@ -4,7 +4,7 @@ import { getOscalVersions, getLatestVersion } from './src/lib/metaschema/index.t
 
 const versions = await getOscalVersions();
 const latest = await getLatestVersion();
-const base = '/oscal-docs/';
+const base = '/OSCAL-Info/';
 
 /** @type {Record<string, string>} */
 const redirects = {
@@ -15,7 +15,7 @@ for (const v of versions) {
 }
 
 export default defineConfig({
-  site: 'https://pkothare.github.io',
+  site: 'https://OSCAL-Foundation.github.io',
   base,
   trailingSlash: 'always',
   redirects,

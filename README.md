@@ -25,7 +25,7 @@ Requires Node.js &ge; 22.12.
 
 ```sh
 npm install
-npm run dev      # http://localhost:4321/oscal-docs/
+npm run dev      # http://localhost:4321/OSCAL-Info/
 npm run build    # static output in ./dist
 npm run preview
 ```
