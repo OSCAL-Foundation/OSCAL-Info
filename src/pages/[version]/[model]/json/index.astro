@@ -1,0 +1,117 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import ModelSidebar from '../../../../components/ModelSidebar.astro';
+import JsonOutline from '../../../../components/JsonOutline.astro';
+import JsonDefinitionSection from '../../../../components/JsonDefinitionSection.astro';
+import {
+  getOscalVersions,
+  MODEL_FILES,
+  MODEL_DISPLAY_NAMES,
+  resolveModel,
+  type ResolvedModel,
+  type ModelItem,
+} from '../../../../lib/metaschema';
+
+export async function getStaticPaths() {
+  const versions = await getOscalVersions();
+  const paths: { params: { version: string; model: string } }[] = [];
+  for (const version of versions) {
+    for (const model of MODEL_FILES.keys()) {
+      paths.push({ params: { version, model } });
+    }
+  }
+  return paths;
+}
+
+const { version, model: modelSlug } = Astro.params;
+const base = import.meta.env.BASE_URL;
+
+let resolved: ResolvedModel;
+let error: string | null = null;
+try {
+  resolved = await resolveModel(modelSlug!, version!);
+} catch (e) {
+  error = e instanceof Error ? e.message : String(e);
+  resolved = {
+    name: modelSlug!,
+    displayName: MODEL_DISPLAY_NAMES.get(modelSlug!) ?? modelSlug!,
+    version: version!,
+    definitions: [],
+  };
+}
+
+const rootDef = resolved.rootDefinition;
+const defMap = new Map(resolved.definitions.map((d) => [d.name, d]));
+
+// JSON serialization name of a model item (group-as for arrays/maps, otherwise ref/name).
+function jsonName(item: ModelItem): string {
+  return item.groupAs || item.ref || item.name || '';
+}
+function typeName(item: ModelItem): string {
+  return item.ref || item.name || '';
+}
+
+// Collect alternate JSON names that point at each def, so we can emit anchor aliases.
+const aliasesByDef = new Map<string, string[]>();
+function collectAliases(items: ModelItem[]) {
+  for (const item of items) {
+    const target = typeName(item);
+    const json = jsonName(item);
+    if (target && json && json !== target) {
+      const set = aliasesByDef.get(target) ?? [];
+      if (!set.includes(json)) set.push(json);
+      aliasesByDef.set(target, set);
+    }
+  }
+}
+for (const def of resolved.definitions) collectAliases(def.modelItems);
+---
+
+<BaseLayout
+  title={`${resolved.displayName} - JSON Reference - ${version}`}
+  version={version}
+  model={modelSlug}
+  format="json"
+>
+  <div class="sidebar-layout">
+    <ModelSidebar
+      base={base}
+      version={version!}
+      modelSlug={modelSlug!}
+      format="json"
+      definitions={resolved.definitions}
+    />
+
+    <div class="content">
+      <h1>{resolved.displayName}</h1>
+
+      {
+        error && (
+          <div
+            class="def-remarks"
+            style="border-left-color: var(--brand-secondary); margin-bottom: 1rem;"
+          >
+            Error loading metaschema: {error}
+          </div>
+        )
+      }
+
+      {
+        rootDef && rootDef.modelItems.length > 0 && (
+          <JsonOutline rootDef={rootDef} defMap={defMap} />
+        )
+      }
+
+      <h2>Definitions ({resolved.definitions.length})</h2>
+      {
+        resolved.definitions.map((def) => (
+          <JsonDefinitionSection
+            def={def}
+            defMap={defMap}
+            aliases={aliasesByDef.get(def.name) ?? []}
+          />
+        ))
+      }
+    </div>
+  </div>
+</BaseLayout>

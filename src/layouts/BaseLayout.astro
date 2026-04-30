@@ -1,0 +1,192 @@
+---
+import { getOscalVersions, getLatestVersion } from '../lib/metaschema';
+import '../styles/global.css';
+
+export interface Props {
+  title: string;
+  version?: string;
+  model?: string;
+  format?: 'json' | 'xml';
+}
+
+const { title, version, model, format } = Astro.props;
+const base = import.meta.env.BASE_URL;
+
+const versions = version ? await getOscalVersions() : [];
+const latest = version ? await getLatestVersion() : '';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} | OSCAL Foundation Docs</title>
+    <link rel="icon" type="image/png" sizes="32x32" href={`${base}favicon-32.png`} />
+    <link rel="icon" type="image/png" sizes="512x512" href={`${base}favicon-512.png`} />
+    <link rel="apple-touch-icon" sizes="180x180" href={`${base}favicon-180.png`} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@300;400;500;700&display=swap"
+    />
+  </head>
+  <body>
+    <header>
+      <nav class="top-nav">
+        <button
+          type="button"
+          class="hamburger"
+          aria-label="Toggle navigation menu"
+          aria-controls="site-sidebar-region"
+          aria-expanded="false"
+        >
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+        </button>
+        <a href={base} class="logo">
+          <img src={`${base}logo.png`} alt="OSCAL Foundation" />
+        </a>
+        <span class="nav-subtitle">Model Reference Documentation</span>
+        <div class="header-controls">
+          {
+            version && model && format && (
+              <>
+                <div class="format-toggle">
+                  <a
+                    href={`${base}${version}/${model}/json/`}
+                    class:list={['format-toggle-btn', format === 'json' && 'active']}
+                  >
+                    JSON
+                  </a>
+                  <a
+                    href={`${base}${version}/${model}/xml/`}
+                    class:list={['format-toggle-btn', format === 'xml' && 'active']}
+                  >
+                    XML
+                  </a>
+                </div>
+                <select
+                  class="version-select format-select"
+                  onchange="if(this.value)window.location.href=this.value"
+                  aria-label="Format"
+                >
+                  <option value={`${base}${version}/${model}/json/`} selected={format === 'json'}>
+                    JSON
+                  </option>
+                  <option value={`${base}${version}/${model}/xml/`} selected={format === 'xml'}>
+                    XML
+                  </option>
+                </select>
+                <select
+                  class="version-select header-version-select"
+                  onchange="if(this.value)window.location.href=this.value"
+                  aria-label="OSCAL version"
+                >
+                  {versions
+                    .slice()
+                    .reverse()
+                    .map((v) => (
+                      <option value={`${base}${v}/${model}/${format}/`} selected={v === version}>
+                        {v}
+                        {v === latest ? ' (latest)' : ''}
+                      </option>
+                    ))}
+                </select>
+              </>
+            )
+          }
+          <a
+            href="https://github.com/pkothare/oscal-docs"
+            target="_blank"
+            rel="noopener"
+            class="github-link"
+            aria-label="View source on GitHub"
+          >
+            <svg viewBox="0 0 16 16" width="24" height="24" aria-hidden="true" fill="currentColor">
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+              ></path>
+            </svg>
+          </a>
+        </div>
+      </nav>
+    </header>
+    <div class="sidebar-backdrop" hidden></div>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      <p>
+        Generated from <a href="https://github.com/usnistgov/OSCAL" target="_blank" rel="noopener"
+          >OSCAL Metaschema</a
+        > sources. An <a href="https://oscalfoundation.org/" target="_blank" rel="noopener"
+          >OSCAL Foundation</a
+        > project.
+      </p>
+    </footer>
+    <script is:inline>
+      (function () {
+        function updateFragmentActive() {
+          const hash = window.location.hash;
+          document.querySelectorAll('.sidebar-link.fragment-active').forEach(function (el) {
+            el.classList.remove('fragment-active');
+          });
+          if (!hash || hash.length < 2) return;
+          document.querySelectorAll('.sidebar-link').forEach(function (el) {
+            const href = el.getAttribute('href') || '';
+            const idx = href.indexOf('#');
+            if (idx >= 0 && href.slice(idx) === hash) {
+              el.classList.add('fragment-active');
+            }
+          });
+        }
+        window.addEventListener('hashchange', updateFragmentActive);
+        document.addEventListener('DOMContentLoaded', updateFragmentActive);
+        updateFragmentActive();
+
+        function setupSidebarToggle() {
+          const btn = document.querySelector('.hamburger');
+          const backdrop = document.querySelector('.sidebar-backdrop');
+          const sidebar = document.querySelector('.sidebar');
+          if (!btn) return;
+          if (!sidebar) {
+            btn.hidden = true;
+            return;
+          }
+          function close() {
+            document.body.classList.remove('sidebar-open');
+            btn.setAttribute('aria-expanded', 'false');
+            if (backdrop) backdrop.hidden = true;
+          }
+          function open() {
+            document.body.classList.add('sidebar-open');
+            btn.setAttribute('aria-expanded', 'true');
+            if (backdrop) backdrop.hidden = false;
+          }
+          btn.addEventListener('click', function () {
+            if (document.body.classList.contains('sidebar-open')) close();
+            else open();
+          });
+          if (backdrop) backdrop.addEventListener('click', close);
+          sidebar.addEventListener('click', function (e) {
+            let t = e.target;
+            while (t && t !== sidebar) {
+              if (t.tagName === 'A') {
+                close();
+                return;
+              }
+              t = t.parentNode;
+            }
+          });
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') close();
+          });
+        }
+        document.addEventListener('DOMContentLoaded', setupSidebarToggle);
+      })();
+    </script>
+  </body>
+</html>
