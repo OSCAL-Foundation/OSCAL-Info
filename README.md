@@ -3,7 +3,6 @@
 A static documentation site for the [OSCAL](https://pages.nist.gov/OSCAL/) (Open Security Controls Assessment Language)
 data models, generated directly from the official [NIST OSCAL Metaschema](https://github.com/usnistgov/OSCAL) sources.
 
-
 ## What it does
 
 - Fetches the OSCAL Metaschema XML for every released OSCAL version at build time.
