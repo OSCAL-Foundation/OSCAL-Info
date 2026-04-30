@@ -29,6 +29,9 @@ export async function getOscalVersions(): Promise<string[]> {
 
 export async function getLatestVersion(): Promise<string> {
   const versions = await getOscalVersions();
+  if (versions.length === 0) {
+    throw new Error('No supported OSCAL versions are available.');
+  }
   return versions[versions.length - 1];
 }
 
