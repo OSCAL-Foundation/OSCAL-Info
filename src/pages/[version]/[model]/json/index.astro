@@ -7,8 +7,8 @@ import {
   getOscalVersions,
   getModelsForVersion,
   resolveModel,
+  orderByAppearance,
   type ResolvedModel,
-  type ModelEntry,
   type ModelItem,
 } from '../../../../lib/metaschema';
 
@@ -44,6 +44,10 @@ try {
 
 const rootDef = resolved.rootDefinition;
 const defMap = new Map(resolved.definitions.map((d) => [d.name, d]));
+
+const orderedDefs = orderByAppearance(resolved.definitions, rootDef);
+const assemblies = orderedDefs.filter((d) => d.type === 'assembly');
+const fields = orderedDefs.filter((d) => d.type === 'field');
 
 // JSON serialization name of a model item (group-as for arrays/maps, otherwise ref/name).
 function jsonName(item: ModelItem): string {
@@ -82,7 +86,7 @@ for (const def of resolved.definitions) collectAliases(def.modelItems);
       modelSlug={modelSlug!}
       format="json"
       models={models}
-      definitions={resolved.definitions}
+      definitions={orderedDefs}
     />
 
     <div class="content">
@@ -105,9 +109,20 @@ for (const def of resolved.definitions) collectAliases(def.modelItems);
         )
       }
 
-      <h2>Definitions ({resolved.definitions.length})</h2>
+      <h2>Assemblies ({assemblies.length})</h2>
       {
-        resolved.definitions.map((def) => (
+        assemblies.map((def) => (
+          <JsonDefinitionSection
+            def={def}
+            defMap={defMap}
+            aliases={aliasesByDef.get(def.name) ?? []}
+          />
+        ))
+      }
+
+      <h2>Fields ({fields.length})</h2>
+      {
+        fields.map((def) => (
           <JsonDefinitionSection
             def={def}
             defMap={defMap}

@@ -7,6 +7,7 @@ import {
   getOscalVersions,
   getModelsForVersion,
   resolveModel,
+  orderByAppearance,
   type ResolvedModel,
 } from '../../../../lib/metaschema';
 
@@ -43,6 +44,10 @@ try {
 const rootDef = resolved.rootDefinition;
 const otherDefs = resolved.definitions.filter((d) => d !== rootDef);
 const defMap = new Map(resolved.definitions.map((d) => [d.name, d]));
+
+const orderedDefs = orderByAppearance(otherDefs, rootDef).filter((d) => d !== rootDef);
+const assemblies = orderedDefs.filter((d) => d.type === 'assembly');
+const fields = orderedDefs.filter((d) => d.type === 'field');
 ---
 
 <BaseLayout
@@ -58,7 +63,7 @@ const defMap = new Map(resolved.definitions.map((d) => [d.name, d]));
       modelSlug={modelSlug!}
       format="xml"
       models={models}
-      definitions={otherDefs}
+      definitions={orderedDefs}
     />
 
     <div class="content">
@@ -79,8 +84,11 @@ const defMap = new Map(resolved.definitions.map((d) => [d.name, d]));
 
       {rootDef && <XmlDefinitionSection def={rootDef} defMap={defMap} asRoot />}
 
-      <h2>Element Definitions ({otherDefs.length})</h2>
-      {otherDefs.map((def) => <XmlDefinitionSection def={def} defMap={defMap} />)}
+      <h2>Assemblies ({assemblies.length})</h2>
+      {assemblies.map((def) => <XmlDefinitionSection def={def} defMap={defMap} />)}
+
+      <h2>Fields ({fields.length})</h2>
+      {fields.map((def) => <XmlDefinitionSection def={def} defMap={defMap} />)}
     </div>
   </div>
 </BaseLayout>
