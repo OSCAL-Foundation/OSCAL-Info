@@ -5,10 +5,10 @@ import JsonOutline from '../../../../components/JsonOutline.astro';
 import JsonDefinitionSection from '../../../../components/JsonDefinitionSection.astro';
 import {
   getOscalVersions,
-  MODEL_FILES,
-  MODEL_DISPLAY_NAMES,
+  getModelsForVersion,
   resolveModel,
   type ResolvedModel,
+  type ModelEntry,
   type ModelItem,
 } from '../../../../lib/metaschema';
 
@@ -16,8 +16,9 @@ export async function getStaticPaths() {
   const versions = await getOscalVersions();
   const paths: { params: { version: string; model: string } }[] = [];
   for (const version of versions) {
-    for (const model of MODEL_FILES.keys()) {
-      paths.push({ params: { version, model } });
+    const models = await getModelsForVersion(version);
+    for (const { slug } of models) {
+      paths.push({ params: { version, model: slug } });
     }
   }
   return paths;
@@ -25,6 +26,7 @@ export async function getStaticPaths() {
 
 const { version, model: modelSlug } = Astro.params;
 const base = import.meta.env.BASE_URL;
+const models = await getModelsForVersion(version!);
 
 let resolved: ResolvedModel;
 let error: string | null = null;
@@ -34,7 +36,7 @@ try {
   error = e instanceof Error ? e.message : String(e);
   resolved = {
     name: modelSlug!,
-    displayName: MODEL_DISPLAY_NAMES.get(modelSlug!) ?? modelSlug!,
+    displayName: models.find((m) => m.slug === modelSlug)?.displayName ?? modelSlug!,
     version: version!,
     definitions: [],
   };
@@ -79,6 +81,7 @@ for (const def of resolved.definitions) collectAliases(def.modelItems);
       version={version!}
       modelSlug={modelSlug!}
       format="json"
+      models={models}
       definitions={resolved.definitions}
     />
 

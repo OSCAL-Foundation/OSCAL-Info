@@ -3,9 +3,8 @@
 
 import { MetaschemaParser } from './parser.ts';
 import {
-  MODEL_DISPLAY_NAMES,
-  MODEL_FILES,
   type MetaschemaDefinition,
+  type ModelEntry,
   type ParsedMetaschema,
   type ResolvedModel,
 } from './types.ts';
@@ -46,10 +45,11 @@ export class MetaschemaLoader {
   }
 
   async resolveModel(modelSlug: string, version: string): Promise<ResolvedModel> {
-    const filename = MODEL_FILES.get(modelSlug);
-    if (!filename) throw new Error(`Unknown model: ${modelSlug}`);
+    const models = await this.getModelsForVersion(version);
+    const model = models.find((m) => m.slug === modelSlug);
+    if (!model) throw new Error(`Unknown model "${modelSlug}" for version ${version}`);
 
-    const definitions = await this.collectAllImports(version, filename, new Set());
+    const definitions = await this.collectAllImports(version, model.filename, new Set());
 
     // Deduplicate by name (first occurrence wins).
     const deduped = new Map<string, MetaschemaDefinition>();
@@ -60,11 +60,57 @@ export class MetaschemaLoader {
     const allDefs = Array.from(deduped.values());
     return {
       name: modelSlug,
-      displayName: MODEL_DISPLAY_NAMES.get(modelSlug) ?? modelSlug,
+      displayName: model.displayName,
       version,
       definitions: allDefs,
       rootDefinition: allDefs.find((d) => d.isRoot),
     };
+  }
+
+  /**
+   * Dynamically discovers which top-level models exist for a given version
+   * by parsing the imports in oscal_complete_metaschema.xml.
+   */
+  private readonly modelsCache = new Map<string, ModelEntry[]>();
+
+  async getModelsForVersion(version: string): Promise<ModelEntry[]> {
+    const cached = this.modelsCache.get(version);
+    if (cached) return cached;
+
+    let complete: ParsedMetaschema;
+    try {
+      complete = await this.fetchMetaschema(version, 'oscal_complete_metaschema.xml');
+    } catch {
+      console.warn(
+        `Failed to load oscal_complete_metaschema.xml for version ${version}; no models available`,
+      );
+      this.modelsCache.set(version, []);
+      return [];
+    }
+
+    const models: ModelEntry[] = [];
+
+    for (const filename of complete.imports) {
+      const parsed = await this.fetchMetaschema(version, filename);
+      const rootDef = parsed.definitions.find((d) => d.isRoot);
+      if (!rootDef) {
+        console.warn(`Model ${filename} in version ${version} has no root definition; skipping`);
+        continue;
+      }
+      const slug = rootDef.rootName;
+      if (!slug) {
+        console.warn(`Model ${filename} in version ${version} has no rootName; skipping`);
+        continue;
+      }
+      models.push({
+        slug,
+        filename,
+        displayName: parsed.schemaName,
+      });
+    }
+
+    this.modelsCache.set(version, models);
+    return models;
   }
 
   private async collectAllImports(
