@@ -11,6 +11,9 @@ interface Props {
 }
 
 const { base, version, modelSlug, format, models, definitions } = Astro.props;
+
+const assemblies = definitions.filter((d) => d.type === 'assembly');
+const fields = definitions.filter((d) => d.type === 'field');
 ---
 
 <aside class="sidebar">
@@ -28,14 +31,29 @@ const { base, version, modelSlug, format, models, definitions } = Astro.props;
     }
   </div>
 
-  <div class="sidebar-section">
-    <div class="sidebar-title">Definitions</div>
-    {
-      definitions.map((def) => (
-        <a href={`#${def.name}`} class="sidebar-link">
-          {def.formalName || def.name}
-        </a>
-      ))
-    }
-  </div>
+  {
+    assemblies.length > 0 && (
+      <div class="sidebar-section">
+        <div class="sidebar-title">Assemblies</div>
+        {assemblies.map((def) => (
+          <a href={`#${def.name}`} class="sidebar-link">
+            {def.formalName || def.name}
+          </a>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    fields.length > 0 && (
+      <div class="sidebar-section">
+        <div class="sidebar-title">Fields</div>
+        {fields.map((def) => (
+          <a href={`#${def.name}`} class="sidebar-link">
+            {def.formalName || def.name}
+          </a>
+        ))}
+      </div>
+    )
+  }
 </aside>
